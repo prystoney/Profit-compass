@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profit Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for better scrollbar aesthetics */
+        .overflow-x-auto::-webkit-scrollbar {
+            height: 8px;
+        }
+        .overflow-x-auto::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .overflow-x-auto::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .max-h-60-scroll {
+            max-height: 15rem; /* 240px */
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-purple-500 to-indigo-700 flex flex-col items-center p-4 font-sans text-gray-800">
+
+    <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-4xl mt-8 mb-8">
+        <div class="flex justify-center space-x-4 mb-8">
+            <button id="calculator-btn" class="px-6 py-3 rounded-lg font-semibold transition duration-300 shadow-md bg-purple-700 text-white">
+                Profit Compass
+            </button>
+            <button id="history-btn" class="px-6 py-3 rounded-lg font-semibold transition duration-300 shadow-md bg-gray-200 text-gray-700 hover:bg-gray-300">
+                History & Recommendations
+            </button>
+        </div>
+
+        <div id="calculator-page" class="">
+            <h1 class="text-4xl font-extrabold text-center text-gray-900 mb-8">
+                Profit Compass
+            </h1>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">Item Name</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Selling Price</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buying Price</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Selling Price</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Buying Price</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profit/Loss</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="items-table-body" class="divide-y divide-gray-200">
+                        </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-center mt-6 space-x-4">
+                <button id="add-item-btn" class="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition duration-300 shadow-lg flex items-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span>Add Item</span>
+                </button>
+                <button id="save-calculation-btn" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-300 shadow-lg flex items-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-3m-4-7l-4 4m0 0l-4-4m4 4V3" />
+                    </svg>
+                    <span>Save Calculation</span>
+                </button>
+            </div>
+
+            <div class="mt-8 p-6 bg-blue-50 rounded-xl shadow-inner text-center">
+                <p class="text-xl text-gray-700 mb-2">Overall Profit/Loss:</p>
+                <p id="overall-profit" class="text-5xl font-extrabold text-green-700">
+                    $0.00
+                </p>
+            </div>
+        </div>
+
+        <div id="history-page" class="hidden">
+            <h1 class="text-4xl font-extrabold text-center text-gray-900 mb-8">
+                Calculation History & Recommendations
+            </h1>
+            <div id="history-content" class="space-y-8">
+                </div>
+            <p id="no-history-message" class="text-center text-gray-600 text-lg hidden">
+                No calculations saved yet. Go back to the calculator to save one!
+            </p>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <p class="text-xl text-gray-700 mb-2">by briston</p>
+    </div>
+
+    <script>
+        // Global state variables
+        let items = [{ id: generateUniqueId(), itemName: '', sellingPrice: '', buyingPrice: '', quantity: '' }];
+        let calculationHistory = [];
+        let currentPage = 'calculator'; // 'calculator' or 'history'
+
+        // DOM Element references
+        const calculatorPage = document.getElementById('calculator-page');
+        const historyPage = document.getElementById('history-page');
+        const calculatorBtn = document.getElementById('calculator-btn');
+        const historyBtn = document.getElementById('history-btn');
+        const itemsTableBody = document.getElementById('items-table-body');
+        const addItemBtn = document.getElementById('add-item-btn');
+        const saveCalculationBtn = document.getElementById('save-calculation-btn');
+        const overallProfitDisplay = document.getElementById('overall-profit');
+        const historyContent = document.getElementById('history-content');
+        const noHistoryMessage = document.getElementById('no-history-message');
+
+        // Helper function to generate a unique ID
+        function generateUniqueId() {
+            return Math.random().toString(36).substring(2, 9);
+        }
+
+        // Function to calculate total selling price for an item
+        function calculateTotalSellingPrice(item) {
+            const sellingPrice = parseFloat(item.sellingPrice) || 0;
+            const quantity = parseInt(item.quantity) || 0;
+            return (sellingPrice * quantity).toFixed(2);
+        }
+
+        // Function to calculate total buying price for an item
+        function calculateTotalBuyingPrice(item) {
+            const buyingPrice = parseFloat(item.buyingPrice) || 0;
+            const quantity = parseInt(item.quantity) || 0;
+            return (buyingPrice * quantity).toFixed(2);
+        }
+
+        // Function to calculate profit for an item
+        function calculateItemProfit(item) {
+            const sellingPrice = parseFloat(item.sellingPrice) || 0;
+            const buyingPrice = parseFloat(item.buyingPrice) || 0;
+            const quantity = parseInt(item.quantity) || 0;
+            return ((sellingPrice * quantity) - (buyingPrice * quantity)).toFixed(2);
+        }
+
+        // Function to calculate and update overall profit
+        function updateOverallProfit() {
+            const totalProfit = items.reduce((sum, item) => {
+                const sellingPrice = parseFloat(item.sellingPrice) || 0;
+                const buyingPrice = parseFloat(item.buyingPrice) || 0;
+                const quantity = parseInt(item.quantity) || 0;
+                const itemProfit = (sellingPrice * quantity) - (buyingPrice * quantity);
+                return sum + itemProfit;
+            }, 0);
+            overallProfitDisplay.textContent = `$${totalProfit.toFixed(2)}`;
+            overallProfitDisplay.classList.remove('text-green-700', 'text-red-700');
+            overallProfitDisplay.classList.add(totalProfit >= 0 ? 'text-green-700' : 'text-red-700');
+        }
+
+        // Function to render the calculator page
+        function renderCalculatorPage() {
+            // Clear existing table rows
+            itemsTableBody.innerHTML = '';
+
+            items.forEach(item => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.dataset.itemId = item.id; // Store item ID on the row
+
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <input type="text" class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 item-name-input"
+                               value="${item.itemName}" placeholder="e.g., Laptop">
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <input type="number" class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 selling-price-input"
+                               value="${item.sellingPrice}" placeholder="e.g., 1200" min="0" step="0.01">
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <input type="number" class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 buying-price-input"
+                               value="${item.buyingPrice}" placeholder="e.g., 1000" min="0" step="0.01">
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <input type="number" class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 quantity-input"
+                               value="${item.quantity}" placeholder="e.g., 5" min="1" step="1">
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-right font-medium total-selling-price">
+                        $${calculateTotalSellingPrice(item)}
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-right font-medium total-buying-price">
+                        $${calculateTotalBuyingPrice(item)}
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-right font-bold item-profit ${
+                        parseFloat(calculateItemProfit(item)) >= 0 ? 'text-green-600' : 'text-red-600'
+                    }">
+                        $${calculateItemProfit(item)}
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-center">
+                        <button class="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition duration-300 shadow-sm remove-item-btn" aria-label="Remove item">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 11-2 0v6a1 1 0 112 0V8z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </td>
+                `;
+                itemsTableBody.appendChild(row);
+
+                // Add event listeners for input changes
+                row.querySelector('.item-name-input').addEventListener('input', (e) => handleItemChange(item.id, 'itemName', e.target.value));
+                row.querySelector('.selling-price-input').addEventListener('input', (e) => handleItemChange(item.id, 'sellingPrice', e.target.value));
+                row.querySelector('.buying-price-input').addEventListener('input', (e) => handleItemChange(item.id, 'buyingPrice', e.target.value));
+                row.querySelector('.quantity-input').addEventListener('input', (e) => handleItemChange(item.id, 'quantity', e.target.value));
+
+                // Add event listener for remove button
+                row.querySelector('.remove-item-btn').addEventListener('click', () => handleRemoveItem(item.id));
+            });
+
+            updateOverallProfit();
+        }
+
+        // Handle changes in input fields for a specific item
+        function handleItemChange(id, field, value) {
+            items = items.map(item =>
+                item.id === id ? { ...item, [field]: value } : item
+            );
+            renderCalculatorPage(); // Re-render the table to reflect changes
+        }
+
+        // Add a new empty row to the items list
+        function handleAddItem() {
+            items.push({ id: generateUniqueId(), itemName: '', sellingPrice: '', buyingPrice: '', quantity: '' });
+            renderCalculatorPage();
+        }
+
+        // Remove an item from the list by its ID
+        function handleRemoveItem(id) {
+            items = items.filter(item => item.id !== id);
+            renderCalculatorPage();
+        }
+
+        // Generate diverse recommendations based on profit
+        function getRecommendation(profit) {
+            if (profit > 100) { // Significant profit
+                return {
+                    text: "Excellent profit! Consider scaling up operations, exploring new markets, or reinvesting in high-performing items. Analyze what made this calculation so successful and replicate it.",
+                    color: "text-green-700"
+                };
+            } else if (profit > 0) { // Moderate profit
+                return {
+                    text: "A good profit! Look into optimizing your buying costs, increasing marketing efforts for these items, or adding value to justify slightly higher selling prices. Small improvements can lead to significant gains.",
+                    color: "text-green-600"
+                };
+            } else if (profit === 0) { // Break-even
+                return {
+                    text: "You broke even. This is an opportunity to fine-tune your strategy. Conduct a detailed cost analysis, research competitor pricing, or differentiate your product to achieve profitability.",
+                    color: "text-blue-700"
+                };
+            } else if (profit > -50) { // Small loss
+                return {
+                    text: "A small loss. Review your recent transactions. Can you negotiate better buying prices or slightly increase selling prices without losing customers? Focus on reducing overheads.",
+                    color: "text-orange-600"
+                };
+            } else { // Significant loss
+                return {
+                    text: "This represents a significant loss. It's crucial to re-evaluate your entire approach for these items. Consider discontinuing underperforming products, finding new suppliers, or seeking expert financial advice.",
+                    color: "text-red-700"
+                };
+            }
+        }
+
+        // Save the current calculation to history
+        function handleSaveCalculation() {
+            const currentOverallProfit = items.reduce((sum, item) => {
+                const sellingPrice = parseFloat(item.sellingPrice) || 0;
+                const buyingPrice = parseFloat(item.buyingPrice) || 0;
+                const quantity = parseInt(item.quantity) || 0;
+                const itemProfit = (sellingPrice * quantity) - (buyingPrice * quantity);
+                return sum + itemProfit;
+            }, 0);
+
+            const newHistoryEntry = {
+                id: generateUniqueId(),
+                date: new Date().toLocaleString(),
+                items: JSON.parse(JSON.stringify(items)), // Deep copy of items
+                overallProfit: currentOverallProfit,
+            };
+            calculationHistory.push(newHistoryEntry);
+
+            // Display a temporary message for saving
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'p-3 mb-4 rounded-lg text-center bg-green-100 text-green-700';
+            messageDiv.textContent = 'Current calculation saved to history!';
+            calculatorPage.insertBefore(messageDiv, calculatorPage.firstChild); // Insert at the top
+            setTimeout(() => messageDiv.remove(), 3000); // Remove after 3 seconds
+        }
+
+        // Function to render the history page
+        function renderHistoryPage() {
+            historyContent.innerHTML = ''; // Clear existing history entries
+
+            if (calculationHistory.length === 0) {
+                noHistoryMessage.classList.remove('hidden');
+            } else {
+                noHistoryMessage.classList.add('hidden');
+                // Display most recent first
+                calculationHistory.slice().reverse().forEach(entry => {
+                    const recommendation = getRecommendation(entry.overallProfit);
+
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = 'bg-gray-50 p-6 rounded-xl shadow-md border-l-4 border-purple-400';
+                    entryDiv.innerHTML = `
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">
+                            Calculation on ${entry.date}
+                        </h2>
+                        <div class="mb-4">
+                            <p class="text-lg font-semibold text-gray-700">Overall Profit/Loss:</p>
+                            <p class="text-4xl font-extrabold ${entry.overallProfit >= 0 ? 'text-green-600' : 'text-red-600'}" style="color: ${recommendation.color.replace('text-', '')};">
+                                $${entry.overallProfit.toFixed(2)}
+                            </p>
+                        </div>
+
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Items:</h3>
+                        <div class="overflow-x-auto mb-4 max-h-60-scroll">
+                            <table class="min-w-full text-sm bg-white border border-gray-200 rounded-lg">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">S. Price</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">B. Price</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Profit</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    ${entry.items.map(item => `
+                                        <tr>
+                                            <td class="px-3 py-2">${item.itemName || 'N/A'}</td>
+                                            <td class="px-3 py-2">$${parseFloat(item.sellingPrice || 0).toFixed(2)}</td>
+                                            <td class="px-3 py-2">$${parseFloat(item.buyingPrice || 0).toFixed(2)}</td>
+                                            <td class="px-3 py-2">${parseInt(item.quantity || 0)}</td>
+                                            <td class="px-3 py-2 font-medium ${
+                                                parseFloat(calculateItemProfit(item)) >= 0 ? 'text-green-600' : 'text-red-600'
+                                            }">
+                                                $${calculateItemProfit(item)}
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-4 p-4 rounded-lg bg-blue-100 border border-blue-200">
+                            <h3 class="text-lg font-semibold text-blue-800 mb-2">Recommendation:</h3>
+                            <p class="text-md ${recommendation.color}">
+                                ${recommendation.text}
+                            </p>
+                        </div>
+                    `;
+                    historyContent.appendChild(entryDiv);
+                });
+            }
+        }
+
+        // Function to switch pages
+        function switchPage(page) {
+            currentPage = page;
+            if (currentPage === 'calculator') {
+                calculatorPage.classList.remove('hidden');
+                historyPage.classList.add('hidden');
+                calculatorBtn.classList.add('bg-purple-700', 'text-white');
+                calculatorBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                historyBtn.classList.remove('bg-purple-700', 'text-white');
+                historyBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                renderCalculatorPage(); // Ensure calculator is re-rendered when returning
+            } else {
+                calculatorPage.classList.add('hidden');
+                historyPage.classList.remove('hidden');
+                historyBtn.classList.add('bg-purple-700', 'text-white');
+                historyBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                calculatorBtn.classList.remove('bg-purple-700', 'text-white');
+                calculatorBtn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                renderHistoryPage(); // Render history when switching to it
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCalculatorPage(); // Initial render of the calculator page
+            switchPage('calculator'); // Ensure calculator is the default view
+
+            calculatorBtn.addEventListener('click', () => switchPage('calculator'));
+            historyBtn.addEventListener('click', () => switchPage('history'));
+            addItemBtn.addEventListener('click', handleAddItem);
+            saveCalculationBtn.addEventListener('click', handleSaveCalculation);
+        });
+    </script>
+</body>
+</html>
